@@ -28,6 +28,25 @@ except ImportError as exc:  # pragma: no cover
 Point = tuple[float, float]
 
 
+def srgb_to_lab(rgb: np.ndarray) -> np.ndarray:
+    values = rgb.astype(np.float64) / 255.0
+    linear = np.where(values <= 0.04045, values / 12.92, ((values + 0.055) / 1.055) ** 2.4)
+    xyz = linear @ np.array(
+        [
+            [0.4124564, 0.3575761, 0.1804375],
+            [0.2126729, 0.7151522, 0.0721750],
+            [0.0193339, 0.1191920, 0.9503041],
+        ]
+    ).T
+    xyz /= np.array([0.95047, 1.0, 1.08883])
+    delta = 6 / 29
+    f = np.where(xyz > delta**3, np.cbrt(xyz), xyz / (3 * delta**2) + 4 / 29)
+    l = 116 * f[:, 1] - 16
+    a = 500 * (f[:, 0] - f[:, 1])
+    b = 200 * (f[:, 1] - f[:, 2])
+    return np.column_stack((l, a, b))
+
+
 def hex_color(value: str) -> tuple[int, int, int]:
     value = value.strip().lstrip("#")
     if len(value) == 3:
@@ -98,15 +117,64 @@ def quantized_palette(pixels: np.ndarray, count: int) -> list[tuple[int, int, in
     unique = np.unique(pixels, axis=0)
     if len(unique) <= count:
         return [tuple(int(x) for x in row) for row in unique]
-    sample = pixels
-    if len(sample) > 250_000:
-        indices = np.linspace(0, len(sample) - 1, 250_000, dtype=np.int64)
-        sample = sample[indices]
-    strip = Image.fromarray(sample.reshape(1, -1, 3).astype(np.uint8), "RGB")
-    quantized = strip.quantize(colors=count, method=Image.Quantize.MEDIANCUT)
-    raw_palette = quantized.getpalette() or []
-    used = sorted({int(x) for x in np.asarray(quantized).reshape(-1)})
-    return [tuple(raw_palette[index * 3 : index * 3 + 3]) for index in used]
+
+    # Quantize source pixels into coarse RGB bins first. The square-rooted bin
+    # weights prevent broad textured areas from consuming most of the palette.
+    bins = (pixels.astype(np.uint16) >> 3).astype(np.uint16)
+    keys, inverse, counts = np.unique(
+        bins[:, 0] * 1024 + bins[:, 1] * 32 + bins[:, 2],
+        return_inverse=True,
+        return_counts=True,
+    )
+    sums = np.zeros((len(keys), 3), dtype=np.float64)
+    np.add.at(sums, inverse, pixels.astype(np.float64))
+    candidates = sums / counts[:, None]
+    lab = srgb_to_lab(candidates)
+    weights = np.sqrt(counts.astype(np.float64))
+    k = min(count, len(candidates))
+
+    centers = [int(np.argmax(counts))]
+    min_distances = np.sum((lab - lab[centers[0]]) ** 2, axis=1)
+    while len(centers) < k:
+        score = min_distances * weights
+        score[centers] = -1
+        next_center = int(np.argmax(score))
+        if score[next_center] <= 0:
+            break
+        centers.append(next_center)
+        distances = np.sum((lab - lab[next_center]) ** 2, axis=1)
+        min_distances = np.minimum(min_distances, distances)
+
+    center_lab = lab[centers].copy()
+    center_rgb = candidates[centers].copy()
+    for _ in range(14):
+        distances = np.sum((lab[:, None, :] - center_lab[None, :, :]) ** 2, axis=2)
+        labels = np.argmin(distances, axis=1)
+        changed = False
+        for index in range(len(center_lab)):
+            member = labels == index
+            if not np.any(member):
+                continue
+            total = np.sum(weights[member])
+            new_lab = np.sum(lab[member] * weights[member, None], axis=0) / total
+            new_rgb = np.sum(candidates[member] * weights[member, None], axis=0) / total
+            changed = changed or np.linalg.norm(new_lab - center_lab[index]) > 0.01
+            center_lab[index] = new_lab
+            center_rgb[index] = new_rgb
+        if not changed:
+            break
+
+    distances = np.sum((lab[:, None, :] - center_lab[None, :, :]) ** 2, axis=2)
+    labels = np.argmin(distances, axis=1)
+    order = sorted(
+        range(len(center_rgb)),
+        key=lambda index: int(np.sum(counts[labels == index])),
+        reverse=True,
+    )
+    return [
+        tuple(int(x) for x in np.clip(np.rint(center_rgb[index]), 0, 255))
+        for index in order
+    ]
 
 
 def nearest_palette(rgb: np.ndarray, palette: Sequence[Sequence[int]]) -> np.ndarray:
