@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PNG → SVG Studio</title>
+  <style>
+    :root{--ink:#18181b;--muted:#71717a;--line:#e4e4e7;--paper:#fff;--soft:#f4f4f5;--accent:#6d4aff;--accent2:#5231d8;--danger:#b42318}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--ink);background:#f7f7f8}
+    button,input,select{font:inherit} button{cursor:pointer}.app{min-height:100vh;display:grid;grid-template-rows:68px 1fr}
+    header{display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.94);backdrop-filter:blur(14px);position:sticky;top:0;z-index:4}
+    .brand{display:flex;align-items:center;gap:12px;font-weight:760;letter-spacing:-.03em}.logo{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;color:white;background:linear-gradient(145deg,#8b70ff,#4d2bd3);box-shadow:0 8px 24px #6d4aff33}.sub{font-size:12px;color:var(--muted);font-weight:550;letter-spacing:0}
+    .header-actions{display:flex;gap:10px}.btn{border:0;border-radius:10px;padding:10px 15px;font-weight:700;transition:.18s ease}.btn:disabled{opacity:.45;cursor:not-allowed}.btn.primary{background:var(--accent);color:#fff;box-shadow:0 5px 16px #6d4aff33}.btn.primary:hover:not(:disabled){background:var(--accent2);transform:translateY(-1px)}.btn.secondary{background:var(--soft);color:var(--ink)}
+    main{display:grid;grid-template-columns:300px minmax(0,1fr);min-height:0}.sidebar{background:var(--paper);border-right:1px solid var(--line);padding:20px;overflow:auto}.section{padding:0 0 20px;margin-bottom:20px;border-bottom:1px solid var(--line)}.section:last-child{border:0}.section-title{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin:0 0 13px;color:#52525b}
+    .segmented{display:grid;grid-template-columns:1fr 1fr;background:var(--soft);padding:3px;border-radius:11px;gap:3px}.segmented button{border:0;background:transparent;padding:9px;border-radius:8px;color:var(--muted);font-weight:700}.segmented button.active{background:white;color:var(--ink);box-shadow:0 1px 4px #00000014}
+    .control{display:grid;gap:7px;margin:13px 0}.control-head{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:650}.value{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:600}.row{display:flex;gap:8px;align-items:center}input[type="range"]{width:100%;accent-color:var(--accent)}input[type="number"],select,input[type="text"]{width:100%;border:1px solid var(--line);border-radius:9px;padding:9px 10px;background:#fff;color:var(--ink)}input[type="color"]{width:42px;height:38px;padding:3px;border:1px solid var(--line);border-radius:9px;background:#fff}.check{display:flex;align-items:center;gap:9px;font-size:13px;font-weight:650;margin-top:10px}.check input{accent-color:var(--accent)}
+    .workspace{min-width:0;padding:20px;display:grid;grid-template-rows:minmax(420px,1fr) auto;gap:14px}.previews{display:grid;grid-template-columns:1fr 1fr;gap:14px;min-height:0}.panel{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;min-width:0;display:grid;grid-template-rows:46px minmax(0,1fr);box-shadow:0 2px 8px #00000008}.panel-head{padding:0 15px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:750}.panel-body{position:relative;display:grid;place-items:center;min-height:360px;overflow:hidden;background-color:#fafafa;background-image:linear-gradient(45deg,#ececef 25%,transparent 25%),linear-gradient(-45deg,#ececef 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#ececef 75%),linear-gradient(-45deg,transparent 75%,#ececef 75%);background-size:24px 24px;background-position:0 0,0 12px,12px -12px,-12px 0}
+    .panel-body img{display:block;max-width:calc(100% - 36px);max-height:calc(100% - 36px);object-fit:contain;filter:drop-shadow(0 8px 18px #0002)}.drop{position:absolute;inset:18px;border:2px dashed #c8c6d1;border-radius:14px;background:#ffffffda;display:grid;place-items:center;text-align:center;padding:24px;transition:.18s}.drop.drag{border-color:var(--accent);background:#f3efff}.drop strong{display:block;margin:12px 0 5px;font-size:17px}.drop small{color:var(--muted)}.upload-icon{font-size:30px}.file-input{display:none}
+    .empty{color:var(--muted);text-align:center;max-width:280px;line-height:1.5}.loader{position:absolute;inset:0;background:#ffffffc7;display:none;place-items:center;backdrop-filter:blur(3px)}.loader.show{display:grid}.spinner{width:34px;height:34px;border:4px solid #ddd7ff;border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}
+    .stats{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 16px;display:flex;align-items:center;gap:10px;min-height:56px}.stat{padding:7px 10px;background:var(--soft);border-radius:9px;font-size:12px;font-weight:720}.palette{display:flex;gap:5px;margin-left:auto}.swatch{width:24px;height:24px;border-radius:7px;border:1px solid #0002;box-shadow:inset 0 0 0 1px #fff5}.status{font-size:13px;color:var(--muted)}.error{color:var(--danger);font-weight:650}
+    .hidden{display:none!important}@media(max-width:900px){main{grid-template-columns:1fr}.sidebar{border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}.section{margin:0}.previews{grid-template-columns:1fr}.workspace{padding:14px}.app{grid-template-rows:62px 1fr}}@media(max-width:620px){header{padding:0 14px}.sub{display:none}.sidebar{grid-template-columns:1fr}.header-actions .secondary{display:none}.workspace{padding:10px}.panel-body{min-height:300px}.stats{flex-wrap:wrap}.palette{margin-left:0;width:100%}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><div class="logo">◇</div><div>PNG → SVG Studio<div class="sub">Vetorização local, privada e editável</div></div></div>
+    <div class="header-actions"><button class="btn secondary" id="newFile">Nova imagem</button><button class="btn primary" id="download" disabled>Baixar SVG</button></div>
+  </header>
+  <main>
+    <aside class="sidebar">
+      <section class="section">
+        <h2 class="section-title">Modo de vetor</h2>
+        <div class="segmented"><button class="active" data-mode="color">Colorido</button><button data-mode="bw">Preto e branco</button></div>
+        <div class="control" id="colorsControl"><div class="control-head"><span>Quantidade de cores</span><span class="value" id="colorsValue">8</span></div><input id="colors" type="range" min="2" max="32" value="8"></div>
+        <div id="bwControls" class="hidden">
+          <div class="control"><div class="control-head"><span>Threshold</span><span class="value" id="thresholdValue">128</span></div><input id="threshold" type="range" min="0" max="255" value="128"></div>
+          <div class="control"><div class="control-head"><span>Cor</span></div><input id="foreground" type="color" value="#000000"></div>
+          <label class="check"><input id="invert" type="checkbox"> Inverter seleção</label>
+        </div>
+      </section>
+      <section class="section">
+        <h2 class="section-title">Fundo</h2>
+        <div class="control"><select id="background"><option value="none">Preservar</option><option value="auto">Remover automaticamente</option><option value="custom">Escolher cor</option></select></div>
+        <div class="control hidden" id="customBg"><div class="row"><input id="backgroundColor" type="color" value="#ffffff"><span class="value">Cor a remover</span></div></div>
+        <div class="control hidden" id="toleranceControl"><div class="control-head"><span>Tolerância do fundo</span><span class="value" id="toleranceValue">24</span></div><input id="bgTolerance" type="range" min="0" max="120" value="24"></div>
+      </section>
+      <section class="section">
+        <h2 class="section-title">Detalhes</h2>
+        <div class="control"><div class="control-head"><span>Suavização</span><span class="value" id="blurValue">0</span></div><input id="blur" type="range" min="0" max="2" step="0.1" value="0"></div>
+        <div class="control"><div class="control-head"><span>Simplificação</span><span class="value" id="simplifyValue">1</span></div><input id="simplify" type="range" min="0" max="4" step="0.1" value="1"></div>
+        <div class="control"><div class="control-head"><span>Remover ruído</span><span class="value" id="areaValue">4 px²</span></div><input id="minArea" type="range" min="0" max="80" value="4"></div>
+      </section>
+      <button class="btn primary" id="vectorize" style="width:100%" disabled>Vetorizar agora</button>
+    </aside>
+    <section class="workspace">
+      <div class="previews">
+        <article class="panel"><div class="panel-head"><span>Original</span><span id="fileMeta" class="value"></span></div><div class="panel-body"><img id="originalPreview" class="hidden" alt="Imagem original"><label class="drop" id="dropZone"><input class="file-input" id="fileInput" type="file" accept="image/png,image/jpeg,image/webp,image/bmp"><div><div class="upload-icon">↥</div><strong>Arraste seu PNG aqui</strong><small>ou clique para selecionar · até 25 MB</small></div></label></div></article>
+        <article class="panel"><div class="panel-head"><span>Resultado SVG</span><span id="resultMeta" class="value">Aguardando imagem</span></div><div class="panel-body"><img id="svgPreview" class="hidden" alt="Resultado vetorizado"><div class="empty" id="emptyResult">Seu vetor editável aparecerá aqui. Ajuste os controles e compare em tempo real.</div><div class="loader" id="loader"><div class="spinner"></div></div></div></article>
+      </div>
+      <div class="stats"><span class="status" id="status">Selecione uma imagem para começar.</span><span class="stat hidden" id="pathsStat"></span><span class="stat hidden" id="nodesStat"></span><div class="palette" id="palette"></div></div>
+    </section>
+  </main>
+</div>
+<script>
+  const $=id=>document.getElementById(id);let file=null,svgText='',svgUrl='',timer=null,requestId=0;
+  const inputs=['colors','threshold','foreground','invert','background','backgroundColor','bgTolerance','blur','simplify','minArea'];
+  function setValue(id,suffix=''){const el=$(id);$(id+'Value').textContent=el.value+suffix}
+  setValue('colors');setValue('threshold');
+  $('bgTolerance').addEventListener('input',()=>{$('toleranceValue').textContent=$('bgTolerance').value});
+  $('blur').addEventListener('input',()=>{$('blurValue').textContent=$('blur').value});
+  $('simplify').addEventListener('input',()=>{$('simplifyValue').textContent=$('simplify').value});
+  $('minArea').addEventListener('input',()=>{$('areaValue').textContent=$('minArea').value+' px²'});
+  $('colors').addEventListener('input',()=>setValue('colors'));$('threshold').addEventListener('input',()=>setValue('threshold'));
+  document.querySelectorAll('[data-mode]').forEach(btn=>btn.onclick=()=>{document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('active',b===btn));$('colorsControl').classList.toggle('hidden',btn.dataset.mode==='bw');$('bwControls').classList.toggle('hidden',btn.dataset.mode!=='bw');schedule()});
+  $('background').onchange=()=>{$('customBg').classList.toggle('hidden',$('background').value!=='custom');$('toleranceControl').classList.toggle('hidden',$('background').value==='none');schedule()};
+  function mode(){return document.querySelector('[data-mode].active').dataset.mode}
+  function choose(f){if(!f)return;if(f.size>25*1024*1024){showError('O arquivo excede 25 MB.');return}file=f;$('originalPreview').src=URL.createObjectURL(f);$('originalPreview').classList.remove('hidden');$('dropZone').classList.add('hidden');$('fileMeta').textContent=(f.size/1024/1024).toFixed(2)+' MB';$('vectorize').disabled=false;vectorize()}
+  $('fileInput').onchange=e=>choose(e.target.files[0]);$('newFile').onclick=()=>{$('fileInput').click()};
+  const drop=$('dropZone');['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('drag')}));['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('drag')}));drop.addEventListener('drop',e=>choose(e.dataTransfer.files[0]));
+  inputs.forEach(id=>$(id).addEventListener('change',schedule));inputs.filter(id=>['colors','threshold','bgTolerance','blur','simplify','minArea'].includes(id)).forEach(id=>$(id).addEventListener('input',schedule));$('vectorize').onclick=vectorize;
+  function schedule(){if(!file)return;clearTimeout(timer);timer=setTimeout(vectorize,450)}
+  function form(){const f=new FormData();f.append('image',file);f.append('mode',mode());f.append('colors',$('colors').value);f.append('threshold',$('threshold').value);f.append('foreground',$('foreground').value);f.append('invert',$('invert').checked);const bg=$('background').value;f.append('background',bg==='custom'?$('backgroundColor').value:bg);f.append('bg_tolerance',$('bgTolerance').value);f.append('blur',$('blur').value);f.append('simplify',$('simplify').value);f.append('min_area',$('minArea').value);f.append('alpha_threshold','8');f.append('precision','2');f.append('max_dimension','1600');return f}
+  async function vectorize(){if(!file)return;const id=++requestId;$('loader').classList.add('show');$('status').className='status';$('status').textContent='Vetorizando…';try{const response=await fetch('/api/vectorize',{method:'POST',body:form()});const data=await response.json();if(id!==requestId)return;if(!response.ok)throw new Error(data.error||'Falha ao vetorizar');svgText=data.svg;if(svgUrl)URL.revokeObjectURL(svgUrl);svgUrl=URL.createObjectURL(new Blob([svgText],{type:'image/svg+xml'}));$('svgPreview').src=svgUrl;$('svgPreview').classList.remove('hidden');$('emptyResult').classList.add('hidden');$('download').disabled=false;const s=data.summary;$('resultMeta').textContent=s.actual_colors+' cor'+(s.actual_colors===1?'':'es');$('status').textContent='SVG pronto para editar e baixar.';$('pathsStat').textContent=s.path_count+' paths';$('nodesStat').textContent=s.node_count+' nós';$('pathsStat').classList.remove('hidden');$('nodesStat').classList.remove('hidden');$('palette').innerHTML=s.palette.map(c=>`<span class="swatch" title="${c}" style="background:${c}"></span>`).join('')}catch(err){if(id===requestId)showError(err.message)}finally{if(id===requestId)$('loader').classList.remove('show')}}
+  function showError(message){$('status').className='status error';$('status').textContent=message}
+  $('download').onclick=()=>{if(!svgText)return;const a=document.createElement('a');a.href=svgUrl;a.download=(file.name.replace(/\.[^.]+$/,'')||'vectorized')+'.svg';a.click()};
+</script>
+</body>
+</html>
